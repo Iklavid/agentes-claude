@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Uno por agente: cambia el 2 por el número (o "recepcion") en Label y en el segundo argumento,
+     y TU_USUARIO por tu usuario de macOS. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.ejemplo.claude-agente2</string>
+  <key>ProgramArguments</key>
+  <array><string>/Users/TU_USUARIO/bin/claude-agente.sh</string><string>2</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>StartInterval</key><integer>300</integer>
+  <key>StandardErrorPath</key><string>/Users/TU_USUARIO/claude-servidor/launchd.log</string>
+</dict>
+</plist>

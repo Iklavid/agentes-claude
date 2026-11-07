@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentes</title>
+<style>
+  :root { --fondo:#0e1117; --panel:#161b24; --borde:#2a3140; --texto:#e6e6e6; --suave:#8b95a5;
+          --libre:#4cd98a; --ocupado:#ffc24d; --parado:#ff5c5c; }
+  body { margin:0; background:var(--fondo); color:var(--texto); font:15px/1.4 system-ui, sans-serif; }
+  header { display:flex; justify-content:space-between; align-items:baseline; padding:12px 16px 4px; }
+  h1 { font-size:20px; margin:0; font-weight:600; }
+  #hora { color:var(--suave); font-size:13px; }
+  main { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:12px; padding:12px 16px 24px; }
+  .tarjeta { background:var(--panel); border:1px solid var(--borde); border-left:6px solid var(--c); border-radius:10px; padding:12px 14px; }
+  .cab { display:flex; justify-content:space-between; align-items:center; }
+  .nombre { font-size:18px; font-weight:600; }
+  .area { color:var(--suave); font-size:13px; }
+  .estado { color:var(--c); font-weight:600; }
+  .ultimo { color:var(--suave); font-size:13px; margin:6px 0 8px; min-height:18px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cifras { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:8px; }
+  .cifra b { display:block; font-size:17px; }
+  .cifra span { color:var(--suave); font-size:12px; }
+  ul { margin:4px 0 0; padding-left:18px; font-size:13px; }
+  li span { color:var(--suave); }
+</style>
+</head>
+<body>
+<header><h1>Agentes de Claude</h1><span id="hora"></span></header>
+<main id="tarjetas"></main>
+<script>
+const COLOR = {libre:"var(--libre)", ocupado:"var(--ocupado)", parado:"var(--parado)"};
+const k = n => n >= 1e6 ? (n / 1e6).toFixed(1) + " M" : n >= 1e3 ? Math.round(n / 1e3) + " k" : String(n);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function hace(seg) {
+  if (seg < 60) return "hace un momento";
+  if (seg < 3600) return `hace ${Math.round(seg / 60)} min`;
+  return `hace ${Math.floor(seg / 3600)} h ${Math.round(seg % 3600 / 60)} min`;
+}
+async function cargar() {
+  try {
+    const d = await (await fetch("estado.json?" + Date.now())).json();
+    const ahora = Date.now() / 1000;
+    document.getElementById("hora").textContent =
+      "Actualizado " + new Date(d.actualizado * 1000).toLocaleTimeString("es-ES", {hour:"2-digit", minute:"2-digit"});
+    document.getElementById("tarjetas").innerHTML = d.agentes.map(a => {
+      const vivo = a.estado !== "parado";
+      const estado = a.estado + (vivo && a.desde ? " · " + hace(ahora - a.desde) : "");
+      const cifras = vivo ? `<div class="cifras">
+          <div class="cifra"><b>${a.tokens_min}</b><span>tokens/min</span></div>
+          <div class="cifra"><b>${a.respuestas_hora}</b><span>respuestas/hora</span></div>
+          <div class="cifra"><b>${k(a.contexto)}</b><span>contexto</span></div>
+          <div class="cifra"><b>${k(a.hoy.salida)}</b><span>escritos hoy</span></div>
+          <div class="cifra"><b>${k(a.hoy.cache + a.hoy.entrada)}</b><span>leídos hoy</span></div>
+          <div class="cifra"><b>${a.tareas.length}</b><span>tareas</span></div></div>` : "";
+      const tareas = a.tareas.map(t => `<li>${esc(t.tarea)} <span>· ${esc(t.estado)}</span></li>`).join("");
+      return `<div class="tarjeta" style="--c:${COLOR[a.estado]}">
+        <div class="cab"><div><div class="nombre">${esc(a.nombre)}</div><div class="area">${esc(a.area)}</div></div>
+        <div class="estado">${estado}</div></div>
+        <div class="ultimo">${esc(a.ultimo || (vivo ? "" : "Sesión cerrada: launchd la recrea en ≤ 5 min"))}</div>
+        ${cifras}${tareas ? `<ul>${tareas}</ul>` : ""}</div>`;
+    }).join("");
+  } catch (e) {
+    document.getElementById("hora").textContent = "Sin conexión con el Mac";
+  }
+}
+cargar();
+setInterval(cargar, 30000);
+</script>
+</body>
+</html>
